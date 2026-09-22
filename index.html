@@ -1,0 +1,1164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="theme-color" content="#060103"/>
+<title>A Story for You</title>
+
+<!-- Cinematic Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Pinyon+Script&display=swap" rel="stylesheet">
+
+<!-- GSAP for Smooth Motion Curves -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
+<style>
+/* ═════════════════════════════════════════════════════════════
+   CINEMATIC ARCHITECTURE & THEME
+   Palette: Void Black, Aged Burgundy, Deep Crimson, Warm Cream, Pale Gold
+═════════════════════════════════════════════════════════════ */
+:root {
+  --bg-dark:       #060103;
+  --bg-deep:       #0d0306;
+  --wine:          #24050d;
+  --crimson-dim:   #540d1a;
+  --crimson:       #8a1626;
+  --crimson-light: #c2293e;
+  --gold:          #c5a059;
+  --cream:         #f2eae2;
+  --cream-dim:     rgba(242, 234, 226, 0.65);
+  --cream-soft:    rgba(242, 234, 226, 0.35);
+
+  --font-serif:    'Playfair Display', Georgia, serif;
+  --font-reading:  'Cormorant Garamond', Georgia, serif;
+  --font-script:   'Pinyon Script', cursive;
+
+  --ease-cinematic: cubic-bezier(0.19, 1, 0.22, 1);
+  --ease-smooth:    cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+html, body {
+  width: 100%;
+  height: 100dvh;
+  min-height: -webkit-fill-available;
+  background-color: var(--bg-dark);
+  color: var(--cream);
+  font-family: var(--font-reading);
+  overflow: hidden;
+  position: relative;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ── Cinematic Atmospherics ── */
+.film-grain {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 900;
+  opacity: 0.038;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+.cinematic-vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  background: radial-gradient(circle at center, transparent 35%, rgba(6, 1, 3, 0.5) 75%, rgba(4, 1, 2, 0.94) 100%);
+}
+
+.light-leak {
+  position: fixed;
+  top: -20%;
+  left: -20%;
+  width: 140%;
+  height: 140%;
+  pointer-events: none;
+  z-index: 2;
+  background: radial-gradient(circle at 20% 20%, rgba(138, 22, 38, 0.12) 0%, transparent 45%),
+              radial-gradient(circle at 80% 80%, rgba(197, 160, 89, 0.05) 0%, transparent 40%);
+  animation: leakDrift 18s ease-in-out infinite alternate;
+}
+
+@keyframes leakDrift {
+  0% { transform: scale(1) translate(0, 0); opacity: 0.6; }
+  100% { transform: scale(1.08) translate(-2%, 2%); opacity: 1; }
+}
+
+#particleCanvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* ── Persistent Floating Audio HUD ── */
+.audio-hud {
+  position: fixed;
+  top: clamp(16px, 3vh, 32px);
+  right: clamp(16px, 3vw, 36px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(13, 3, 6, 0.4);
+  border: 1px solid rgba(242, 234, 226, 0.08);
+  padding: 8px 14px;
+  border-radius: 40px;
+  backdrop-filter: blur(12px);
+  opacity: 0;
+  transition: opacity 1s var(--ease-smooth);
+}
+.audio-hud.active { opacity: 1; }
+
+.audio-btn {
+  background: none;
+  border: none;
+  color: var(--cream);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  opacity: 0.8;
+  transition: opacity 0.3s;
+}
+.audio-btn:hover { opacity: 1; }
+.audio-btn svg { width: 16px; height: 16px; fill: currentColor; }
+
+.volume-slider {
+  -webkit-appearance: none;
+  width: 60px;
+  height: 2px;
+  background: rgba(242, 234, 226, 0.2);
+  outline: none;
+  border-radius: 2px;
+}
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--gold);
+  cursor: pointer;
+}
+
+/* ── Master Cinematic Canvas (Stage) ── */
+.stage {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Screen Frame Letterboxing (2.35:1 Cinematic feel) ── */
+.cinematic-bars {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 995;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.bar-top, .bar-bottom {
+  width: 100%;
+  height: clamp(16px, 4vh, 48px);
+  background: var(--bg-dark);
+  transition: height 1.2s var(--ease-cinematic);
+}
+
+/* ── Scenes Structure ── */
+.scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(20px, 6vw, 80px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 1.4s var(--ease-cinematic), visibility 1.4s;
+  z-index: 20;
+}
+.scene.current {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* ── Typographic Treatments & Buttons ── */
+.title-serif {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--cream);
+  text-shadow: 0 0 50px rgba(0, 0, 0, 0.8), 0 2px 20px rgba(138, 22, 38, 0.35);
+}
+
+.text-sub {
+  font-family: var(--font-reading);
+  font-weight: 300;
+  font-style: italic;
+  color: var(--cream-dim);
+  letter-spacing: 0.05em;
+  line-height: 1.8;
+}
+
+.cine-btn {
+  background: transparent;
+  border: 1px solid rgba(242, 234, 226, 0.22);
+  color: var(--cream);
+  font-family: var(--font-reading);
+  font-style: italic;
+  font-size: clamp(15px, 2vw, 17px);
+  letter-spacing: 0.16em;
+  padding: 12px 36px;
+  border-radius: 40px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  outline: none;
+  transition: border-color 0.5s var(--ease-smooth), color 0.5s var(--ease-smooth), transform 0.3s;
+  backdrop-filter: blur(8px);
+}
+.cine-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(138, 22, 38, 0.3), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.8s var(--ease-cinematic);
+}
+.cine-btn:hover {
+  border-color: var(--gold);
+  transform: translateY(-2px);
+}
+.cine-btn:hover::before {
+  transform: translateX(100%);
+}
+
+/* ═════════════════════════════════════════════════════════════
+   SCENE SPECIFIC STYLES
+═════════════════════════════════════════════════════════════ */
+
+/* Scene 1: Opening */
+#scene-open {
+  flex-direction: column;
+  text-align: center;
+  gap: 2rem;
+}
+.open-quote-1 {
+  font-size: clamp(2rem, 5.5vw, 4.4rem);
+  line-height: 1.25;
+  opacity: 0;
+}
+.open-quote-2 {
+  font-size: clamp(1.2rem, 2.5vw, 1.7rem);
+  opacity: 0;
+}
+
+/* Scene Music Prompt */
+#scene-music {
+  flex-direction: column;
+  text-align: center;
+  gap: 2.5rem;
+}
+.music-lead {
+  font-size: clamp(1.4rem, 3.2vw, 2.2rem);
+  letter-spacing: 0.12em;
+}
+
+/* Scenes 2 & 3: Visual Memories & Montage */
+.visual-stage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 5;
+}
+.photo-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.08);
+  filter: blur(12px) brightness(0.6);
+  opacity: 0;
+  will-change: transform, filter, opacity;
+}
+.visual-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(6,1,3,0.3) 0%, rgba(6,1,3,0.1) 40%, rgba(6,1,3,0.7) 85%, rgba(6,1,3,0.92) 100%);
+  z-index: 6;
+}
+.visual-caption-wrap {
+  position: absolute;
+  bottom: clamp(40px, 9vh, 90px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 780px;
+  text-align: center;
+  z-index: 7;
+}
+.visual-caption {
+  font-size: clamp(1.3rem, 3vw, 2rem);
+  line-height: 1.5;
+  color: var(--cream);
+  font-family: var(--font-reading);
+  font-style: italic;
+  font-weight: 300;
+  text-shadow: 0 2px 14px rgba(0,0,0,0.85);
+  opacity: 0;
+  transform: translateY(16px);
+}
+.visual-progress {
+  position: absolute;
+  bottom: clamp(18px, 4vh, 32px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 7;
+}
+.progress-pip {
+  width: 32px;
+  height: 2px;
+  background: rgba(242, 234, 226, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+.progress-pip-fill {
+  position: absolute;
+  inset: 0;
+  width: 0%;
+  background: var(--gold);
+}
+
+/* Scene 4: Emotional Realization */
+#scene-realization {
+  flex-direction: column;
+  text-align: center;
+  justify-content: center;
+}
+.thought-stream {
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.thought-line {
+  font-size: clamp(1.5rem, 4vw, 2.8rem);
+  font-family: var(--font-serif);
+  font-style: italic;
+  line-height: 1.4;
+  color: var(--cream);
+  max-width: 28ch;
+  opacity: 0;
+  filter: blur(8px);
+  position: absolute;
+}
+
+/* Scene 5: Handwritten Letter */
+#scene-letter {
+  align-items: center;
+  justify-content: center;
+}
+.letter-scrollable {
+  max-height: 82dvh;
+  width: 100%;
+  max-width: min(88vw, 700px);
+  overflow-y: auto;
+  padding: clamp(24px, 5vw, 54px);
+  background: linear-gradient(165deg, rgba(22, 6, 12, 0.72) 0%, rgba(10, 2, 5, 0.88) 100%);
+  border: 1px solid rgba(197, 160, 89, 0.16);
+  border-radius: 4px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.75), inset 0 0 40px rgba(138, 22, 38, 0.1);
+  backdrop-filter: blur(16px);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(197, 160, 89, 0.3) transparent;
+}
+.letter-scrollable::-webkit-scrollbar { width: 3px; }
+.letter-scrollable::-webkit-scrollbar-thumb { background: rgba(197, 160, 89, 0.3); }
+
+.letter-header {
+  font-family: var(--font-script);
+  font-size: clamp(2.4rem, 6vw, 3.8rem);
+  color: var(--gold);
+  line-height: 1.2;
+  margin-bottom: 2rem;
+  text-shadow: 0 0 24px rgba(197, 160, 89, 0.3);
+}
+.letter-content p {
+  font-family: var(--font-reading);
+  font-size: clamp(1.1rem, 2.4vw, 1.35rem);
+  line-height: 1.85;
+  color: var(--cream-dim);
+  font-weight: 300;
+  margin-bottom: 1.6em;
+  opacity: 0;
+  transform: translateY(14px);
+}
+.letter-signoff {
+  margin-top: 2.5rem;
+  text-align: right;
+  opacity: 0;
+}
+.letter-sign-prefix {
+  font-style: italic;
+  font-size: 1.05rem;
+  color: var(--cream-soft);
+  display: block;
+}
+.letter-sign-name {
+  font-family: var(--font-script);
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  color: var(--cream);
+  line-height: 1.3;
+}
+.letter-advance-cta {
+  display: flex;
+  justify-content: center;
+  margin-top: 3rem;
+  opacity: 0;
+}
+
+/* Scene 6: The Confession */
+#scene-confession {
+  flex-direction: column;
+  text-align: center;
+}
+.confess-lead {
+  font-size: clamp(1.2rem, 2.5vw, 1.6rem);
+  color: var(--cream-soft);
+  margin-bottom: 1.5rem;
+  opacity: 0;
+}
+.confess-question {
+  font-size: clamp(2rem, 6vw, 4.4rem);
+  line-height: 1.2;
+  margin-bottom: 2rem;
+  opacity: 0;
+}
+.confess-name {
+  color: var(--gold);
+  font-style: italic;
+  font-weight: 600;
+}
+
+/* Scene 7: Responsive Question Interface */
+#scene-choices {
+  flex-direction: column;
+  text-align: center;
+}
+.choice-query {
+  font-size: clamp(1.8rem, 5vw, 3.4rem);
+  margin-bottom: 3.5rem;
+}
+.choice-actions {
+  display: flex;
+  gap: 1.6rem;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.btn-choice-yes {
+  border-color: rgba(197, 160, 89, 0.4);
+  background: linear-gradient(135deg, rgba(138, 22, 38, 0.45) 0%, rgba(197, 160, 89, 0.25) 100%);
+  color: var(--cream);
+  padding: 14px 44px;
+  font-size: 1.15rem;
+  box-shadow: 0 4px 30px rgba(138, 22, 38, 0.35);
+}
+.btn-choice-yes:hover {
+  transform: translateY(-3px) scale(1.02);
+  border-color: var(--gold);
+  box-shadow: 0 8px 40px rgba(197, 160, 89, 0.4);
+}
+.btn-choice-maybe {
+  color: var(--cream-soft);
+  border-color: rgba(242, 234, 226, 0.12);
+  background: transparent;
+  padding: 14px 36px;
+}
+.btn-choice-maybe:hover {
+  color: var(--cream);
+  border-color: rgba(242, 234, 226, 0.3);
+}
+
+/* Scene 8: The Finale & Respectful Branching */
+#scene-finale {
+  flex-direction: column;
+  text-align: center;
+}
+.finale-image-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  transform: scale(1.04);
+  z-index: 1;
+}
+.finale-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(6, 1, 3, 0.6) 0%, rgba(6, 1, 3, 0.95) 90%);
+  z-index: 2;
+}
+.finale-content {
+  position: relative;
+  z-index: 3;
+  max-width: 680px;
+}
+.finale-phrase {
+  font-size: clamp(1.8rem, 5vw, 3.6rem);
+  line-height: 1.3;
+  margin-bottom: 1rem;
+  opacity: 0;
+}
+.finale-sub {
+  font-size: clamp(1.1rem, 2.5vw, 1.5rem);
+  color: var(--cream-dim);
+  opacity: 0;
+}
+.finale-sign {
+  margin-top: 3rem;
+  font-family: var(--font-script);
+  font-size: clamp(2.4rem, 6vw, 4rem);
+  color: var(--gold);
+  opacity: 0;
+}
+
+/* Reduced Motion Override */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+  .photo-frame { transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- Persistent Atmospheric Layers -->
+<div class="film-grain" aria-hidden="true"></div>
+<div class="cinematic-vignette" aria-hidden="true"></div>
+<div class="light-leak" aria-hidden="true"></div>
+<canvas id="particleCanvas" aria-hidden="true"></canvas>
+
+<!-- Top & Bottom Film Bars -->
+<aside class="cinematic-bars" aria-hidden="true">
+  <div class="bar-top"></div>
+  <div class="bar-bottom"></div>
+</aside>
+
+<!-- Floating Audio Controller HUD -->
+<header class="audio-hud" id="audioHud" aria-label="Audio Controls">
+  <button class="audio-btn" id="audioToggleBtn" title="Mute / Unmute Audio" aria-label="Toggle Sound">
+    <svg id="audioIcon" viewBox="0 0 24 24">
+      <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+    </svg>
+  </button>
+  <input type="range" class="volume-slider" id="volumeControl" min="0" max="1" step="0.05" value="0.7" title="Volume">
+</header>
+
+<!-- Primary Cinematic Stage -->
+<main class="stage">
+
+  <!-- SCENE 1: Opening Mysterious Callout -->
+  <section class="scene" id="scene-open" aria-label="Cinematic Opening">
+    <h1 class="title-serif open-quote-1" id="openQuote1">There is something I want to tell you.</h1>
+    <p class="text-sub open-quote-2" id="openQuote2">Just give me a few minutes.</p>
+    <button class="cine-btn" id="btnBegin" style="opacity: 0; margin-top: 1.5rem;">[ BEGIN ]</button>
+  </section>
+
+  <!-- SCENE INTERLUDE: Audio Introduction (Autoplay Policy Compliant) -->
+  <section class="scene" id="scene-music" aria-label="Music Setup">
+    <p class="text-sub music-lead">Before we begin, step into this world with sound.</p>
+    <button class="cine-btn" id="btnPlayMusic">[ PLAY & ENTER ]</button>
+  </section>
+
+  <!-- SCENE 2 & 3: Visual Memory Montage Frame -->
+  <section class="scene" id="scene-visuals" aria-label="Memories">
+    <div class="visual-stage" id="visualStage"></div>
+    <div class="visual-overlay"></div>
+    <div class="visual-caption-wrap">
+      <p class="visual-caption" id="visualCaption"></p>
+    </div>
+    <div class="visual-progress" id="visualProgress"></div>
+  </section>
+
+  <!-- SCENE 4: Emotional Realization -->
+  <section class="scene" id="scene-realization" aria-label="Realization">
+    <div class="thought-stream" id="thoughtContainer"></div>
+  </section>
+
+  <!-- SCENE 5: Personal Letter -->
+  <section class="scene" id="scene-letter" aria-label="Personal Letter">
+    <div class="letter-scrollable" id="letterContainer">
+      <h2 class="letter-header" id="letterSalutation">Dear You,</h2>
+      <div class="letter-content" id="letterBody"></div>
+      <div class="letter-signoff" id="letterSignoff">
+        <span class="letter-sign-prefix">always and truly,</span>
+        <span class="letter-sign-name" id="letterSignName">Me</span>
+      </div>
+      <div class="letter-advance-cta" id="letterCta">
+        <button class="cine-btn" id="btnContinueLetter">Keep going →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCENE 6: The Main Confession -->
+  <section class="scene" id="scene-confession" aria-label="Confession">
+    <p class="text-sub confess-lead" id="confessLead">I could have kept this quietly inside.</p>
+    <h2 class="title-serif confess-question" id="confessHeadline">
+      Would you give me the chance to be something more to you, <span class="confess-name" id="confessHerName">Her Name</span>?
+    </h2>
+    <button class="cine-btn" id="btnToChoices" style="opacity: 0; margin-top: 1rem;">Hold that thought</button>
+  </section>
+
+  <!-- SCENE 7: Respectful Choice -->
+  <section class="scene" id="scene-choices" aria-label="The Question">
+    <h2 class="title-serif choice-query">What is your heart telling you?</h2>
+    <div class="choice-actions">
+      <button class="cine-btn btn-choice-yes" id="btnAnswerYes">Yes, I will</button>
+      <button class="cine-btn btn-choice-maybe" id="btnAnswerMaybe">Let me think…</button>
+    </div>
+  </section>
+
+  <!-- SCENE 8: Finale (Both Paths) -->
+  <section class="scene" id="scene-finale" aria-label="Finale">
+    <div class="finale-image-backdrop" id="finaleBackdrop"></div>
+    <div class="finale-overlay"></div>
+    <div class="finale-content">
+      <h2 class="title-serif finale-phrase" id="finalePhrase">Whatever happens next...</h2>
+      <p class="text-sub finale-sub" id="finaleSub">I'm glad I got to tell you.</p>
+      <div class="finale-sign" id="finaleSignName">— My Name</div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// =============================================================================
+// 1. CONFIGURATION & CUSTOMIZATION
+// Edit names, paths, memories, and your letter directly below.
+// =============================================================================
+const MY_NAME  = "Arnav";
+const HER_NAME = "Sophia";
+
+// Placeholder audio file — replace with any relative/hosted path: e.g. "music/song.mp3"
+const MUSIC_SRC = "https://cdn.freesound.org/previews/612/612080_5674468-lq.mp3"; 
+
+// Photos displayed during Scene 2 & 3 (montage)
+// Uses high-definition, royalty-free mood images as defaults; replace freely with her pictures.
+const MEMORIES = [
+  {
+    src: "https://images.unsplash.com/photo-1518199266791-5375a83190b7?q=80&w=1600&auto=format&fit=crop",
+    caption: "Some moments stay etched into memory without asking for permission."
+  },
+  {
+    src: "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?q=80&w=1600&auto=format&fit=crop",
+    caption: "And some people quietly turn those fleeting moments into an entire world."
+  },
+  {
+    src: "https://images.unsplash.com/photo-1529333166437-7750a6dd5a70?q=80&w=1600&auto=format&fit=crop",
+    caption: "The way you smile before finishing a thought is something I'll never forget."
+  }
+];
+
+// Thoughts revealed sequentially in Scene 4 (Realization)
+const THOUGHT_STRINGS = [
+  "I don't know exactly when it happened.",
+  "Somewhere between ordinary days and quiet conversations...",
+  "You became someone I couldn't stop thinking about.",
+  "And I realized...",
+  "...I have something I needed to tell you."
+];
+
+// The personal letter text in Scene 5[cite: 2]
+const LETTER_PARAGRAPHS = [
+  "I have started drafting this in my head dozens of times, crumpled it up, and started over. Words usually come easily to me, but whenever I try to put how I feel about you onto paper, they feel either too small or entirely inadequate.",
+  "There is a gentleness to you that reshapes the atmosphere around you. You notice details about people that everyone else hurries past. You listen in a way that makes whatever is said feel genuinely valued.",
+  "I'm not asking you to feel the same way right now. I simply wanted to give this truth its honest place in the world: meeting you has made my life richer and vastly more beautiful."
+];
+
+// Optional Lyric Cue System[cite: 2]
+// If you don't use lyrics, set ENABLE_LYRIC_SYNC = false[cite: 2].
+const ENABLE_LYRIC_SYNC = false;
+const LYRIC_CONFIG = [
+  { at: 0,     line: "Quiet opening chords...", sub: "", photo: MEMORIES[0].src },
+  { at: 14000, line: "When the sky turned gold", sub: "", photo: MEMORIES[1].src }
+];
+
+// Timing variables (in milliseconds)[cite: 2]
+const PHOTO_DISPLAY_DURATION = 6500; // Duration per montage photo[cite: 2]
+const THOUGHT_LINE_DURATION  = 3800; // Duration per realization line[cite: 2]
+
+// =============================================================================
+// 2. AUDIO SYSTEM
+// Manages smooth fades, continuous play, volume changes, and state persistence[cite: 2].
+// =============================================================================
+class CinematicAudioEngine {
+  constructor(src) {
+    this.audio = new Audio(src);
+    this.audio.loop = true;
+    this.audio.preload = "auto";
+    this.targetVolume = 0.7;
+    this.audio.volume = 0;
+    this.isMuted = false;
+    this.fadeTween = null;
+
+    this.hud = document.getElementById("audioHud");
+    this.toggleBtn = document.getElementById("audioToggleBtn");
+    this.slider = document.getElementById("volumeControl");
+    this.icon = document.getElementById("audioIcon");
+
+    this._bindEvents();
+  }
+
+  _bindEvents() {
+    this.toggleBtn.addEventListener("click", () => this.toggleMute());
+    this.slider.addEventListener("input", (e) => {
+      this.targetVolume = parseFloat(e.target.value);
+      if (!this.isMuted) this.audio.volume = this.targetVolume;
+    });
+
+    if (ENABLE_LYRIC_SYNC) {
+      this.audio.addEventListener("timeupdate", () => this._checkLyrics());
+    }
+  }
+
+  start() {
+    this.audio.play().then(() => {
+      this.hud.classList.add("active");
+      this.fadeIn(this.targetVolume, 3.5);
+    }).catch(err => {
+      console.warn("Autoplay notice: User interaction is required for audio playback.", err);
+    });
+  }
+
+  fadeIn(toVolume = this.targetVolume, duration = 3) {
+    if (this.fadeTween) this.fadeTween.kill();
+    this.fadeTween = gsap.to(this.audio, {
+      volume: toVolume,
+      duration: duration,
+      ease: "power2.out"
+    });
+  }
+
+  fadeOut(duration = 2.5) {
+    if (this.fadeTween) this.fadeTween.kill();
+    return new Promise(resolve => {
+      this.fadeTween = gsap.to(this.audio, {
+        volume: 0,
+        duration: duration,
+        ease: "power2.in",
+        onComplete: resolve
+      });
+    });
+  }
+
+  toggleMute() {
+    this.isMuted = !this.isMuted;
+    if (this.isMuted) {
+      this.audio.volume = 0;
+      this.icon.innerHTML = `<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>`;
+    } else {
+      this.audio.volume = this.targetVolume;
+      this.icon.innerHTML = `<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>`;
+    }
+  }
+
+  _checkLyrics() {
+    const currentMs = this.audio.currentTime * 1000;
+    const cue = [...LYRIC_CONFIG].reverse().find(item => currentMs >= item.at);
+    if (cue && cue.line !== this.lastCueLine) {
+      this.lastCueLine = cue.line;
+      document.dispatchEvent(new CustomEvent("lyricTrigger", { detail: cue }));
+    }
+  }
+}
+
+// =============================================================================
+// 3. CINEMATIC ATMOSPHERE & FLOATING PARTICLES
+// Lightweight canvas engine simulating dust motes and drifting embers[cite: 2].
+// =============================================================================
+class ParticleAtmosphere {
+  constructor(canvasId) {
+    this.canvas = document.getElementById(canvasId);
+    this.ctx = this.canvas.getContext('2d');
+    this.particles = [];
+    this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.count = this.reducedMotion ? 0 : 36;
+    this._resize();
+    window.addEventListener('resize', () => this._resize());
+    this._initParticles();
+    this.render();
+  }
+
+  _resize() {
+    this.w = this.canvas.width = window.innerWidth;
+    this.h = this.canvas.height = window.innerHeight;
+  }
+
+  _initParticles() {
+    this.particles = [];
+    for (let i = 0; i < this.count; i++) {
+      this.particles.push({
+        x: Math.random() * this.w,
+        y: Math.random() * this.h,
+        r: Math.random() * 1.8 + 0.5,
+        speedX: (Math.random() - 0.5) * 0.25,
+        speedY: -Math.random() * 0.35 - 0.08,
+        alpha: Math.random() * 0.45 + 0.1,
+        color: Math.random() > 0.4 ? 'rgba(242, 234, 226,' : 'rgba(197, 160, 89,'
+      });
+    }
+  }
+
+  render() {
+    if (this.reducedMotion) return;
+    this.ctx.clearRect(0, 0, this.w, this.h);
+    for (let p of this.particles) {
+      p.x += p.speedX;
+      p.y += p.speedY;
+      if (p.y < -10) p.y = this.h + 10;
+      if (p.x < -10) p.x = this.w + 10;
+      if (p.x > this.w + 10) p.x = -10;
+
+      this.ctx.fillStyle = `${p.color}${p.alpha})`;
+      this.ctx.beginPath();
+      this.ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      this.ctx.fill();
+    }
+    requestAnimationFrame(() => this.render());
+  }
+}
+
+// =============================================================================
+// 4. MASTER EXPERIENCE DIRECTOR
+// Coordinates scene switches, timelines, photo montages, and branching logic[cite: 2].
+// =============================================================================
+class Director {
+  constructor() {
+    this.audio = new CinematicAudioEngine(MUSIC_SRC);
+    this.atmosphere = new ParticleAtmosphere("particleCanvas");
+    this.currentSceneIndex = 0;
+
+    // Preload photographs[cite: 2]
+    MEMORIES.forEach(item => {
+      const img = new Image();
+      img.src = item.src;
+    });
+
+    this._bindDOM();
+  }
+
+  _bindDOM() {
+    // Populate dynamic strings[cite: 2]
+    document.getElementById("letterSalutation").textContent = `Dearest ${HER_NAME},`;
+    document.getElementById("confessHerName").textContent = HER_NAME;
+    document.getElementById("letterSignName").textContent = MY_NAME;
+    document.getElementById("finaleSignName").textContent = `— ${MY_NAME}`;
+
+    // Set buttons[cite: 2]
+    document.getElementById("btnBegin").addEventListener("click", () => this.goToScene("scene-music"));
+    document.getElementById("btnPlayMusic").addEventListener("click", () => {
+      this.audio.start();
+      this.startMemoriesMontage();
+    });
+    document.getElementById("btnContinueLetter").addEventListener("click", () => this.goToScene("scene-confession"));
+    document.getElementById("btnToChoices").addEventListener("click", () => this.goToScene("scene-choices"));
+    document.getElementById("btnAnswerYes").addEventListener("click", () => this.handleResponse(true));
+    document.getElementById("btnAnswerMaybe").addEventListener("click", () => this.handleResponse(false));
+  }
+
+  goToScene(sceneId) {
+    const current = document.querySelector(".scene.current");
+    const next = document.getElementById(sceneId);
+
+    if (current) {
+      gsap.to(current, {
+        opacity: 0,
+        duration: 1.2,
+        ease: "power2.inOut",
+        onComplete: () => {
+          current.classList.remove("current");
+          this._activateScene(next);
+        }
+      });
+    } else {
+      this._activateScene(next);
+    }
+  }
+
+  _activateScene(sceneEl) {
+    sceneEl.classList.add("current");
+    gsap.fromTo(sceneEl, 
+      { opacity: 0 }, 
+      { opacity: 1, duration: 1.4, ease: "power2.out" }
+    );
+    this._onSceneEntry(sceneEl.id);
+  }
+
+  _onSceneEntry(id) {
+    switch (id) {
+      case "scene-open":
+        this._runOpeningTimeline();
+        break;
+      case "scene-confession":
+        this._runConfessionTimeline();
+        break;
+      case "scene-letter":
+        this._renderLetter();
+        break;
+    }
+  }
+
+  // ── Scene 1: Mysterious Opening Sequence[cite: 2] ──
+  _runOpeningTimeline() {
+    const tl = gsap.timeline({ delay: 0.6 });
+    tl.to("#openQuote1", { opacity: 1, filter: "blur(0px)", duration: 2.2, ease: "power2.out" })
+      .to("#openQuote2", { opacity: 1, duration: 1.8, ease: "power2.out" }, "+=0.8")
+      .to("#btnBegin", { opacity: 1, y: 0, duration: 1.2, ease: "power2.out" }, "+=0.6");
+  }
+
+  // ── Scene 2 & 3: Visual Memories & Montage Director[cite: 2] ──
+  startMemoriesMontage() {
+    this.goToScene("scene-visuals");
+
+    const visualStage = document.getElementById("visualStage");
+    const captionEl = document.getElementById("visualCaption");
+    const progressContainer = document.getElementById("visualProgress");
+
+    visualStage.innerHTML = "";
+    progressContainer.innerHTML = "";
+
+    // Build photo frames and progress pips[cite: 2]
+    const frames = MEMORIES.map((mem, index) => {
+      const frame = document.createElement("div");
+      frame.className = "photo-frame";
+      frame.style.backgroundImage = `url('${mem.src}')`;
+      visualStage.appendChild(frame);
+
+      const pip = document.createElement("div");
+      pip.className = "progress-pip";
+      pip.innerHTML = `<div class="progress-pip-fill" id="pipFill${index}"></div>`;
+      progressContainer.appendChild(pip);
+
+      return frame;
+    });
+
+    let currentMemIndex = 0;
+
+    const playNextPhoto = () => {
+      if (currentMemIndex >= MEMORIES.length) {
+        // Montage complete: proceed into darkness and realization[cite: 2]
+        gsap.to(["#scene-visuals"], {
+          opacity: 0,
+          duration: 1.8,
+          ease: "power2.inOut",
+          onComplete: () => this.startRealizationStream()
+        });
+        return;
+      }
+
+      const activeFrame = frames[currentMemIndex];
+      const memData = MEMORIES[currentMemIndex];
+      const currentPipFill = document.getElementById(`pipFill${currentMemIndex}`);
+
+      // Ken Burns Slow Camera Drift[cite: 2]
+      gsap.set(activeFrame, { opacity: 0, scale: 1.08, filter: "blur(12px) brightness(0.55)" });
+      
+      const photoTl = gsap.timeline({
+        onComplete: () => {
+          gsap.to(activeFrame, { opacity: 0, filter: "blur(8px)", duration: 1.4 });
+          currentMemIndex++;
+          playNextPhoto();
+        }
+      });
+
+      // Photo entrance: blur to crisp, slow zoom[cite: 2]
+      photoTl.to(activeFrame, {
+        opacity: 1,
+        filter: "blur(0px) brightness(0.85)",
+        duration: 2.2,
+        ease: "power2.out"
+      })
+      .to(activeFrame, {
+        scale: 1.15,
+        duration: PHOTO_DISPLAY_DURATION / 1000,
+        ease: "none"
+      }, 0);
+
+      // Progress bar fill[cite: 2]
+      photoTl.to(currentPipFill, {
+        width: "100%",
+        duration: (PHOTO_DISPLAY_DURATION - 600) / 1000,
+        ease: "none"
+      }, 0.2);
+
+      // Caption crossfade[cite: 2]
+      captionEl.textContent = memData.caption;
+      photoTl.fromTo(captionEl, 
+        { opacity: 0, y: 18 }, 
+        { opacity: 1, y: 0, duration: 1.4, ease: "power2.out" }, 
+        0.6
+      );
+      photoTl.to(captionEl, { opacity: 0, y: -10, duration: 1.2 }, (PHOTO_DISPLAY_DURATION / 1000) - 1.2);
+    };
+
+    playNextPhoto();
+  }
+
+  // ── Scene 4: Emotional Realization Sequence[cite: 2] ──
+  startRealizationStream() {
+    this.goToScene("scene-realization");
+    const container = document.getElementById("thoughtContainer");
+    container.innerHTML = "";
+
+    const thoughtElements = THOUGHT_STRINGS.map(text => {
+      const p = document.createElement("p");
+      p.className = "thought-line";
+      p.textContent = text;
+      container.appendChild(p);
+      return p;
+    });
+
+    let thoughtIdx = 0;
+    const showNextThought = () => {
+      if (thoughtIdx >= thoughtElements.length) {
+        setTimeout(() => this.goToScene("scene-letter"), 1200);
+        return;
+      }
+
+      const el = thoughtElements[thoughtIdx];
+      const tl = gsap.timeline({
+        onComplete: () => {
+          thoughtIdx++;
+          showNextThought();
+        }
+      });
+
+      tl.to(el, { opacity: 1, filter: "blur(0px)", duration: 1.4, ease: "power2.out" })
+        .to(el, { opacity: 0, filter: "blur(6px)", duration: 1.2, ease: "power2.in" }, `+=${THOUGHT_LINE_DURATION / 1000}`);
+    };
+
+    setTimeout(showNextThought, 600);
+  }
+
+  // ── Scene 5: Personal Handwritten Letter Reveal[cite: 2] ──
+  _renderLetter() {
+    const body = document.getElementById("letterBody");
+    body.innerHTML = "";
+    
+    LETTER_PARAGRAPHS.forEach(text => {
+      const p = document.createElement("p");
+      p.textContent = text;
+      body.appendChild(p);
+    });
+
+    const paragraphs = body.querySelectorAll("p");
+    const tl = gsap.timeline({ delay: 0.4 });
+
+    tl.staggerTo(paragraphs, 1.4, {
+      opacity: 1,
+      y: 0,
+      ease: "power2.out"
+    }, 0.8)
+    .to("#letterSignoff", { opacity: 1, duration: 1.6, ease: "power2.out" }, "-=0.4")
+    .to("#letterCta", { opacity: 1, duration: 1 }, "+=0.2");
+  }
+
+  // ── Scene 6: Main Confession Reveal[cite: 2] ──
+  _runConfessionTimeline() {
+    const tl = gsap.timeline({ delay: 0.6 });
+    tl.to("#confessLead", { opacity: 1, duration: 1.8, ease: "power2.out" })
+      .to("#confessHeadline", { opacity: 1, duration: 2.4, ease: "power2.out" }, "+=0.6")
+      .to("#btnToChoices", { opacity: 1, duration: 1.2 }, "+=0.8");
+  }
+
+  // ── Scene 7 & 8: Response Branching & Cinematic Finale[cite: 2] ──
+  handleResponse(isYes) {
+    this.goToScene("scene-finale");
+
+    const backdrop = document.getElementById("finaleBackdrop");
+    const phrase = document.getElementById("finalePhrase");
+    const sub = document.getElementById("finaleSub");
+    const sign = document.getElementById("finaleSignName");
+
+    if (isYes) {
+      // Yes path: warm memory portrait & celebration[cite: 2]
+      backdrop.style.backgroundImage = `url('${MEMORIES[MEMORIES.length - 1].src}')`;
+      phrase.textContent = "You made this moment unforgettable.";
+      sub.textContent = "I promise to make every day ahead just as genuine.";
+      
+      const tl = gsap.timeline({ delay: 0.5 });
+      tl.to(backdrop, { opacity: 0.4, scale: 1.1, duration: 7, ease: "power1.out" }, 0)
+        .to(phrase, { opacity: 1, y: 0, duration: 2, ease: "power2.out" }, 0.5)
+        .to(sub, { opacity: 1, duration: 2, ease: "power2.out" }, 1.8)
+        .to(sign, { opacity: 1, duration: 2.2, ease: "power2.out" }, 3);
+
+    } else {
+      // Respectful, non-manipulative response[cite: 2]
+      backdrop.style.display = "none";
+      phrase.textContent = "Take all the time you need.";
+      sub.textContent = "No matter what, I'm simply grateful that I got to be honest with you.";
+      
+      const tl = gsap.timeline({ delay: 0.5 });
+      tl.to(phrase, { opacity: 1, duration: 2, ease: "power2.out" }, 0.4)
+        .to(sub, { opacity: 1, duration: 2, ease: "power2.out" }, 1.6)
+        .to(sign, { opacity: 1, duration: 2, ease: "power2.out" }, 2.8);
+    }
+
+    // Let the ending hold and gently quiet the track[cite: 2]
+    setTimeout(() => {
+      this.audio.fadeOut(7);
+    }, 5000);
+  }
+}
+
+// =============================================================================
+// 5. INITIALIZATION
+// Boots the cinematic state once the DOM and resources are ready[cite: 2].
+// =============================================================================
+window.addEventListener("DOMContentLoaded", () => {
+  const director = new Director();
+  director.goToScene("scene-open");
+});
+</script>
+</body>
+</html>
